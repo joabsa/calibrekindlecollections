@@ -155,7 +155,7 @@ def updateCollections():
         cName = '%s@en-US'%(collName)
         if cName in kindleC:
             collInKindle = True
-        else:
+        elif collType == 'series':
             for author in authors:
                 tempName = collName + " - " + author
                 tName = '%s@en-US'%(tempName)
@@ -163,8 +163,7 @@ def updateCollections():
                     collInKindle = True
                     cName = tName
                     break
-            # append author's name to series
-            if not collInKindle and len(authors) == 1 and collType == 'series':
+            if not collInKindle and len(authors) == 1:
                 tempName = collName + " - " + authors[0]
                 cName = '%s@en-US'%(tempName)
                 if cName in kindleC:
