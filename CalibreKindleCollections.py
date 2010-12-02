@@ -51,6 +51,7 @@ def setup():
     # parse commmand line for options
     parser = OptionParser()
     parser.add_option("--nt","--no-tags", "--notags", action="store_false", dest="useTags", default=True, help="Do not use tags to create collections")
+    parser.add_option("--na","--no-authors", "--noauthors", action="store_false", dest="useAuthors", default=True, help="Do not use authors to create collections")
     # change default for your use. use '' if u want to set it completely from command line
     parser.add_option("--et", "--exclude-tags",dest="excludeTags", default = 'kindle,2kindle', help="Exclude the comma separated tags when creating collections")
     parser.add_option("-m","--mnt", dest="mntPoint", default=".", help="Required if script is not run from the root folder of Kindle.")
@@ -87,7 +88,7 @@ def loadCalibre():
                         colls[series]['authors'].append(author)
                 colls[series]['lpaths'].append(lpath)
                 colls[series]['titles'].append(title)
-            else:
+            elif options.useAuthors == True:
                 for author in authors:
                     if author not in colls:
                         colls[author] = { 'titles': [], 'collName': author,'collType': 'author', 'authors': [author], 'lpaths': [] }
