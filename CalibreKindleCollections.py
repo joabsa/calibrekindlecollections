@@ -52,6 +52,7 @@ def setup():
     parser = OptionParser()
     parser.add_option("--nt","--no-tags", "--notags", action="store_false", dest="useTags", default=True, help="Do not use tags to create collections")
     parser.add_option("--na","--no-authors", "--noauthors", action="store_false", dest="useAuthors", default=True, help="Do not use authors to create collections")
+    parser.add_option("--mc","--min-count", "--mincount", action="store_false", dest="minCount", default=2, help="Minimum number of books required to create a collection (default 2). Already existing collections with less books are kept.")
     # change default for your use. use '' if u want to set it completely from command line
     parser.add_option("--et", "--exclude-tags",dest="excludeTags", default = 'kindle,2kindle', help="Exclude the comma separated tags when creating collections")
     parser.add_option("-m","--mnt", dest="mntPoint", default=".", help="Required if script is not run from the root folder of Kindle.")
@@ -172,7 +173,7 @@ def updateCollections():
                 
             
         # add books if there is more than one book in the collection
-        if collInKindle or len(lpaths) > 1:
+        if collInKindle or len(lpaths) >= options.minCount:
             
             # create the kindle collection if it does not exist and update access time
             if not collInKindle:
