@@ -4,3 +4,4 @@ system
 collections.json*
 metadata.*
 *.swp
+*.bak
