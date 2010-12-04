@@ -1,5 +1,4 @@
 system
-*.scala
 *.txt
 collections.json*
 metadata.*
