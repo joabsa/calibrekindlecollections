@@ -25,7 +25,7 @@ Please feel free to use and extend the script in any way you want. If you alread
 import sys,os,json,time
 from hashlib import sha1
 from optparse import OptionParser
-
+import logging
 
 # Relative path to collection json file
 COLLECTIONS = 'system/collections.json'
@@ -42,6 +42,9 @@ calibreC = {}
 # Dictionary for command-line options
 options = {}
 
+# logger for the application
+log = logging.getLogger("app")
+
 def setup():
     ''' 
     In case the script is not run in the root folder of the Kindle device, the Kindle Mount Point has to be updated because relative paths won`t work anymore 
@@ -56,12 +59,27 @@ def setup():
     # change default for your use. use '' if u want to set it completely from command line
     parser.add_option("--et", "--exclude-tags",dest="excludeTags", default = 'kindle,2kindle', help="Exclude the comma separated tags when creating collections")
     parser.add_option("-m","--mnt", dest="mntPoint", default=".", help="Required if script is not run from the root folder of Kindle.")
+    parser.add_option("-v","--verbose", dest="verbose", default=False,
+                      action="store_true", help="Show more information")
+    
     (options,args) = parser.parse_args()    
     options.excludeTags = options.excludeTags.split(',')
     
     # Use the mount point 
     COLLECTIONS = os.path.join(options.mntPoint,COLLECTIONS)
     CALIBRE = os.path.join(options.mntPoint,CALIBRE)
+
+    # setup the logger
+    if options.verbose:
+        log.setLevel(logging.INFO)
+    else:
+        log.setLevel(logging.ERROR)
+
+    ch = logging.StreamHandler()
+    formatter = logging.Formatter("%(message)s")
+    ch.setFormatter(formatter)
+    log.addHandler(ch)
+
     
 def loadCalibre():
     ''' Loads/Transform Calibre metadata in dictionary '''
@@ -112,7 +130,7 @@ def loadCalibre():
         calibreC = colls.values()
 
     except Exception, err:
-        sys.stderr.write('ERROR loadCalibre: %s\n'%str(err))
+        log.error("loadCalibre: %s"%str(err))
         exit()
     
 def loadCollections():
@@ -197,7 +215,7 @@ def updateCollections():
                 
             # print a description of the collection 
             collDesc = '%s:\n%s\n'%(cName[0:cName.find('@en')],'\t'+'\n\t'.join(titles))
-            print collDesc.encode('utf-8')
+            log.info(collDesc.encode('utf-8'))
 
 if __name__ == '__main__':
 
@@ -205,7 +223,7 @@ if __name__ == '__main__':
     
     # Check if path are correct
     if not (os.path.exists(COLLECTIONS) and os.path.exists(CALIBRE)):
-        print 'ERROR: unknown path to Kindle mounting point. Please set `%s` to correct path (e.g. /Volumes/Kindle)'%(options.mntPoint)
+        log.error("Unknown path to Kindle mounting point. Please correct path (e.g. /Volumes/Kindle) on the command line")
         sys.exit() 
         
     # Load collections
