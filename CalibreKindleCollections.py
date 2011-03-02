@@ -24,8 +24,8 @@ Please feel free to use and extend the script in any way you want. If you alread
 
 import sys,os,json,time
 from hashlib import sha1
-from optparse import OptionParser
 import logging
+
 
 # Relative path to collection json file
 COLLECTIONS = 'system/collections.json'
@@ -65,20 +65,25 @@ def setup():
     (options,args) = parser.parse_args()    
     options.excludeTags = options.excludeTags.split(',')
     
+
     # Use the mount point 
     COLLECTIONS = os.path.join(options.mntPoint,COLLECTIONS)
     CALIBRE = os.path.join(options.mntPoint,CALIBRE)
 
     # setup the logger
-    if options.verbose:
-        log.setLevel(logging.INFO)
-    else:
+    if options.quiet:
         log.setLevel(logging.ERROR)
+    elif options.verbose:
+        log.setLevel(logging.DEBUG)
+    else:
+        log.setLevel(logging.INFO)
 
     ch = logging.StreamHandler()
     formatter = logging.Formatter("%(message)s")
     ch.setFormatter(formatter)
     log.addHandler(ch)
+
+    log.debug("Log level: %s"%log.getEffectiveLevel())
 
     
 def loadCalibre():
