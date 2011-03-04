@@ -25,6 +25,15 @@ Please feel free to use and extend the script in any way you want. If you alread
 import sys,os,json,time
 from hashlib import sha1
 import logging
+import argparse
+
+########## Customize. Can also be modified through command line #############
+noTags=True
+noAuthors=False
+noSeries=False
+
+excludeTags='kindle,2kindle'
+###########################################################################
 
 
 # Relative path to collection json file
@@ -52,19 +61,22 @@ def setup():
     global COLLECTIONS,CALIBRE,options
 
     # parse commmand line for options
-    parser = OptionParser()
-    parser.add_option("--nt","--no-tags", "--notags", action="store_false", dest="useTags", default=True, help="Do not use tags to create collections")
-    parser.add_option("--na","--no-authors", "--noauthors", action="store_false", dest="useAuthors", default=True, help="Do not use authors to create collections")
-    parser.add_option("--mc","--min-count", "--mincount", dest="minCount", default=2, help="Minimum number of books required to create a collection (default 2). Already existing collections with less books are kept.")
-    # change default for your use. use '' if u want to set it completely from command line
-    parser.add_option("--et", "--exclude-tags",dest="excludeTags", default = 'kindle,2kindle', help="Exclude the comma separated tags when creating collections")
-    parser.add_option("-m","--mnt", dest="mntPoint", default=".", help="Required if script is not run from the root folder of Kindle.")
-    parser.add_option("-v","--verbose", dest="verbose", default=False,
-                      action="store_true", help="Show more information")
+    parser = argparse.ArgumentParser(description='Create collections for books maintained by Calibre for the Kindle')
+    parser.add_argument("--nt", "--notags", action="store_false", dest="createTags", default=not noTags, help="Do not use tags to create collections")
+    parser.add_argument("--na", "--noauthors", action="store_false", dest="createAuthors", default=not noAuthors, help="Do not use authors to create collections")
+    parser.add_argument("--ns", "--noseries", action="store_false", dest="createSeries", default=not noSeries, help="Do not use series to create collections")
+
+    parser.add_argument("--et", "--excltags",dest="excludeTags", default = excludeTags, help="Exclude the comma separated tags when creating collections")
+
+    parser.add_argument("-m","--mnt", dest="mntPoint", default=".", help="Required if script is not run from the root folder of Kindle.")
+    parser.add_argument("-v","--verbose", dest="verbose", default=False, action="store_true", help="Show more information")
+    parser.add_argument("-q","--quiet",dest="quiet",default=False,action="store_true",help= "Show less information")
     
-    (options,args) = parser.parse_args()    
+    options = parser.parse_args()    
     options.excludeTags = options.excludeTags.split(',')
     
+    
+    options.minCount = 2
 
     # Use the mount point 
     COLLECTIONS = os.path.join(options.mntPoint,COLLECTIONS)
@@ -84,6 +96,11 @@ def setup():
     log.addHandler(ch)
 
     log.debug("Log level: %s"%log.getEffectiveLevel())
+    log.debug("Create tags: %s"%options.createTags)
+    log.debug("Create authors: %s"%options.createAuthors)
+    log.debug("Create series: %s"%options.createSeries)
+    log.debug("Exclude Tags: %s"%options.excludeTags)
+    log.debug("Kindle Folder: %s"%options.mntPoint)
 
     
 def loadCalibre():
@@ -103,8 +120,9 @@ def loadCalibre():
             title = book['title']
             tags = book['tags']
 
-
-            if series != None:
+            # if the book is part of a series place it in the series
+            # collection otherwise place it in the author's collection
+            if series != None and options.createSeries:
                 if series not in colls:
                     colls[series] = { 'collName': series, 'collType': 'series', 'authors': [], 'lpaths': [], 'titles': [] }
                 for author in authors:
@@ -112,7 +130,7 @@ def loadCalibre():
                         colls[series]['authors'].append(author)
                 colls[series]['lpaths'].append(lpath)
                 colls[series]['titles'].append(title)
-            elif options.useAuthors == True:
+            elif options.createAuthors:
                 for author in authors:
                     if author not in colls:
                         colls[author] = { 'titles': [], 'collName': author,'collType': 'author', 'authors': [author], 'lpaths': [] }
@@ -120,7 +138,7 @@ def loadCalibre():
                 colls[author]['titles'].append(title)
 
 
-            if options.useTags == True:
+            if options.createTags:
                 for tag in tags:
                     if tag not in options.excludeTags:
                         if tag not in colls:
