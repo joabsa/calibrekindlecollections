@@ -106,7 +106,7 @@ def setup():
 
     
 def loadCalibre():
-    ''' Loads/Transform Calibre metadata in dictionary '''
+    ''' Loads/Transform Calibre metadata'''
     global calibreC,options
     try:
         cf = open(CALIBRE,'r')
@@ -116,11 +116,16 @@ def loadCalibre():
         colls= {}
 	    
         for book in calibreC:
-            authors = book['authors']
-            series = book['series']
             lpath = book['lpath']
+
             title = book['title']
             tags = book['tags']
+            authors = book['authors']
+            series = book['series']
+            series_index = book['series_index']
+
+            if series_index != None:
+                title = "%s "%series_index + title  
 
             # if the book is part of a series place it in the series
             # collection otherwise place it in the author's collection
@@ -239,7 +244,7 @@ def updateCollections():
                     kindleC[cName]['items'].append(asin) 
                 
             # print a description of the collection 
-            collDesc = '%s:\n%s\n'%(cName[0:cName.find('@en')],'\t'+'\n\t'.join(titles))
+            collDesc = '%s:\n%s\n'%(cName[0:cName.find('@en')],'\t'+'\n\t'.join(sorted(titles)))
             log.info(collDesc.encode('utf-8'))
 
 if __name__ == '__main__':
