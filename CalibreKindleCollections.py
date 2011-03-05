@@ -187,8 +187,10 @@ def lastAccess():
 
 
 def titleCompare(title):
-    ''' Sorts title in ascending order. This funciton is supplied
-    as the key for the sorted function '''
+    ''' 
+    Sorts title in ascending order. This funciton is supplied
+    as the key for the sorted function 
+    '''
 
     index = title.find(" ")
     if index == -1:
