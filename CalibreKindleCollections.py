@@ -185,6 +185,21 @@ def lastAccess():
     ''' Returns a lastaccess value in milliseconds '''
     return int(time.time()*1000)
 
+
+def titleCompare(title):
+    ''' Sorts title in ascending order. This funciton is supplied
+    as the key for the sorted function '''
+
+    index = title.find(" ")
+    if index == -1:
+        return title
+
+    series_index = title[:index]
+    try:
+        return float(series_index)
+    except ValueError:
+        return title
+
 def updateCollections():
     '''
     Calibre data is traversed each book encountered is added to a collection with the name of
@@ -244,7 +259,7 @@ def updateCollections():
                     kindleC[cName]['items'].append(asin) 
                 
             # print a description of the collection 
-            collDesc = '%s:\n%s\n'%(cName[0:cName.find('@en')],'\t'+'\n\t'.join(sorted(titles)))
+            collDesc = '%s:\n%s\n'%(cName[0:cName.find('@en')],'\t'+'\n\t'.join(sorted(titles,key=titleCompare))) 
             log.info(collDesc.encode('utf-8'))
 
 if __name__ == '__main__':
