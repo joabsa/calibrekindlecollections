@@ -38,11 +38,13 @@ excludeTags='kindle,2kindle'
 
 # Relative path to collection json file
 COLLECTIONS = 'system/collections.json'
-# Relative path to documents folder
+# Relative path to calibre database
 CALIBRE = 'metadata.calibre'
+# Relative path to the documents folder
+DOCUMENTS='documents'
 
 # for the computation of the sha1 identifier
-KINDEL_ABS = '/mnt/us'
+KINDLE_ABS = '/mnt/us'
 
 # Dictionary for storing collections
 kindleC = {}
@@ -226,7 +228,7 @@ def updateCollections():
             # add the paths to the books for the collection
             for lpath in lpaths:
                 # determine the kindle specific absolute path
-                absPath = '%s/%s'%(KINDEL_ABS,lpath)
+                absPath = '%s/%s'%(KINDLE_ABS,lpath)
                 
                 # compute the unique identifier, kindle uses the sha1 hashcode preceded by a * 
                 # the device specific absolute path is used, e.g. '/mnt/us/documents/research/test.pdf'
