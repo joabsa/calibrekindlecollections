@@ -59,6 +59,9 @@ KINDLE_ABS = '/mnt/us'
 kindleC = {}
 calibreC = {}
 
+# array of all the kindle asins
+kindleBooksAsins = []
+
 # Dictionary for command-line options
 options = {}
 
@@ -71,6 +74,7 @@ def setup():
     Kindle Mount Point has to be updated because relative paths won`t work
     anymore
     '''
+
     global COLLECTIONS,CALIBRE,options,kindleBooksAsins
 
     # parse commmand line for options
@@ -120,6 +124,9 @@ def setup():
 
     options.minCount = 2
 
+    # get all the asins of books that are in the Kindle's document folder
+    kindleBooksAsins = getKindleAsins(options.mntPoint)
+
     log.debug("Log level: %s"%log.getEffectiveLevel())
     log.debug("Create tags: %s"%options.createTags)
     log.debug("Create authors: %s"%options.createAuthors)
@@ -127,21 +134,31 @@ def setup():
     log.debug("Exclude Tags: %s"%options.excludeTags)
     log.debug("Kindle Folder: %s"%options.mntPoint)
 
-    
+
 def loadCalibre():
-    ''' Loads/Transform Calibre metadata'''
-    global calibreC,options
+    '''
+    Loads/Transform Calibre metadata
+    '''
+
+    global calibreC,options,kindleBooksAsins
     try:
         cf = open(CALIBRE,'r')
-        calibreC = json.load(cf)
+        calibreB = json.load(cf)
         cf.close()
-      
-        colls= {}
-	    
-        for book in calibreC:
-            lpath = book['lpath']
 
+        colls= {}
+        count = 0
+
+        for book in calibreB:
             title = book['title']
+            # compute asins
+            lpath = book['lpath']
+            kAsin = getAsin(lpath)
+            if kAsin not in kindleBooksAsins:
+                count = count + 1
+                log.debug("%s) %s not in Kindle"%(count,title))
+                continue
+
             tags = book['tags']
             authors = book['authors']
             series = book['series']
@@ -155,64 +172,113 @@ def loadCalibre():
             if series != None and options.createSeries:
                 if series not in colls:
                     colls[series] = { 'collName': series, 'collType': 'series',
-                                    'authors': [], 'lpaths': [], 'titles': [] }
+                                    'authors': [], 'kAsins': [], 'titles': [] }
                 for author in authors:
                     if author not in colls[series]['authors']:
                         colls[series]['authors'].append(author)
-                colls[series]['lpaths'].append(lpath)
+                colls[series]['kAsins'].append(kAsin)
                 colls[series]['titles'].append(title)
             elif options.createAuthors:
                 for author in authors:
                     if author not in colls:
                         colls[author] = { 'titles': [], 'collName': author,
                                           'collType': 'author',
-                                          'authors': [author], 'lpaths': [] }
-                colls[author]['lpaths'].append(lpath)
+                                          'authors': [author], 'kAsins': [] }
+                colls[author]['kAsins'].append(kAsin)
                 colls[author]['titles'].append(title)
 
 
             if options.createTags:
                 for tag in tags:
-                    if tag not in options.excludeTags:
+                    if tag not in options.excludetags:
                         if tag not in colls:
                             colls[tag] = { 'collName': tag, 'collType': 'tag',
-                                           'authors': [], 'lpaths': [],
+                                           'authors': [], 'kAsins': [],
                                            'titles': [] }
                         for author in authors:
                             if author not in colls[tag]['authors']:
                                 colls[tag]['authors'].append(author)
-                        colls[tag]['lpaths'].append(lpath)
+                        colls[tag]['kAsins'].append(kAsin)
                         colls[tag]['titles'].append(title)
 
 
+        log.debug("Number of Calibre collections: %s"%len(colls))
         calibreC = colls.values()
 
     except Exception, err:
-        log.error("loadCalibre: %s"%str(err))
+        log.error("loadcalibre: %s"%str(err))
         exit()
 
 def loadCollections():
-    ''' Loads Kindle collections in dictionary '''
-    global kindleC
+    ''' loads kindle collections in dictionary '''
+    global kindleC,COLLECTIONS
     try:
         cf = open(COLLECTIONS,'r')
         kindleC = json.load(cf)
         cf.close()
     except:
-        print 'loadCollections'
-        print 'WARNING: %s could not be loaded. Creating a new \
-version.'%COLLECTIONS
+        print 'loadCollections exceptio exceptionn'
 
 def saveCollections():
     ''' Dump kindle collections dictionary back into json file '''
+
     cf = open(COLLECTIONS,'wb')
     json.dump(kindleC,cf)
     cf.close()
 
 
 def lastAccess():
-    ''' Returns a lastaccess value in milliseconds '''
+    ''' returns a lastaccess value in milliseconds '''
     return int(time.time()*1000)
+
+
+def getAsin(book):
+    '''
+    Compute the kindle asin for the book
+    '''
+
+    if book.startswith(DOCUMENTS):
+        kpath = os.path.join(KINDLE_ABS,book)
+    else:
+        kpath = os.path.join(KINDLE_ABS,DOCUMENTS,book)
+    kpath = kpath.replace("\\","/")
+    kAsin = '*%s'%sha1(kpath).hexdigest()
+    #log.debug(kpath)
+    return kAsin
+
+
+def kindleBooks(kindleMount):
+    '''
+    Generator for books in the kindle document folder
+    '''
+
+    bookExtension = ('.prc','.txt','.mobi','.azw','.pdf','.azw1')
+    kDocFolder = os.path.join(kindleMount,DOCUMENTS)
+    for root,dirs,files in os.walk(kDocFolder):
+        if len(dirs) == 0:
+            #log.debug("%s %s %s\n" % (root,dirs,files))
+            for book in files:
+                if book.endswith(bookExtension):
+                    book = os.path.join(root,book)
+                    log.debug(book)
+                    yield book[book.find(DOCUMENTS):]
+
+
+def getKindleAsins(kindleMount):
+    '''
+    Get a list of asins of all documents physically present on the kindle
+    '''
+
+    kAsins = []
+    for book in kindleBooks(kindleMount):
+        kAsins.append(getAsin(book))
+
+    numberOfBooks = len(kAsins)
+    if numberOfBooks == 0:
+        log.debug("\nNo books on the Kindle")
+    else:
+        log.debug("\nNumber of books on the Kindle: %s" % numberOfBooks)
+    return kAsins
 
 
 def titleCompare(title):
@@ -238,7 +304,7 @@ def updateCollections():
     '''
 
     for coll in calibreC:
-        lpaths = coll['lpaths']
+        kAsins = coll['kAsins']
         authors = coll['authors']
         collName = coll['collName']
         collType = coll['collType']
@@ -268,29 +334,20 @@ def updateCollections():
 
 
         # add books if there is more than one book in the collection
-        if collInKindle or len(lpaths) >= options.minCount:
+        if collInKindle or len(kAsins) >= options.minCount:
 
-            # create the kindle collection if it does not exist and update
+            # create the kindle collection if it does not exist. Update
             # access time
             if not collInKindle:
                 kindleC[cName] = {'items':[], 'lastAccess':lastAccess()}
             else:
                 kindleC[cName]['lastAccess'] = lastAccess()
 
-
-            # add the paths to the books for the collection
-            for lpath in lpaths:
-                # determine the kindle specific absolute path
-                absPath = '%s/%s'%(KINDLE_ABS,lpath)
-
-                # compute the unique identifier, kindle uses the sha0 hashcode
-                # preceded by a *. The device specific absolute path is used,
-                # e.g. '/mnt/us/documents/research/test.pdf'
-                asin = '*%s'%sha1(absPath).hexdigest()
-
+            # add the asins of the books to the collection
+            for kAsin in kAsins:
                 # if the document is not already in the collection we add it
-                if asin not in kindleC[cName]['items']:
-                    kindleC[cName]['items'].append(asin)
+                if kAsin not in kindleC[cName]['items']:
+                    kindleC[cName]['items'].append(kAsin)
 
             # print a description of the collection
             collDesc = '%s:\n%s\n'%(cName[0:cName.find('@en')],'\t'+'\n\t'.
@@ -317,5 +374,5 @@ if __name__ == '__main__':
 
     # display reminder to restart kindle
     print 'REMINDER: COLLECTIONS WILL NOT BE UPDATED UNLESS YOU RESTART YOUR \
-KINDLE NOW! HOLD THE SWITCH FOR 20 SECONDS AND THEN RELEASE. THEN WAIT 20 \
-SECONDS; THE SCREEN WILL FLASH AND THEN THE DEVICE WILL RESTART'
+ KINDLE NOW! HOLD THE SWITCH FOR 20 SECONDS AND THEN RELEASE. THEN WAIT 20 \
+ SECONDS; THE SCREEN WILL FLASH AND THEN THE DEVICE WILL RESTART'
